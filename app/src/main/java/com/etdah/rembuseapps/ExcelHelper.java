@@ -24,20 +24,53 @@ public class ExcelHelper {
      * sebagai dd/MM/yyyy agar tahunnya tidak hilang (misalnya jika
      * format sel di Excel hanya "d-mmm").
      */
-    private static String cellText(Cell cell, DataFormatter formatter) {
+    private static String cellText(Cell cell) {
         if (cell == null) return "";
 
         try {
-            if (cell.getCellType() == CellType.NUMERIC
-                    && DateUtil.isCellDateFormatted(cell)) {
-                return new SimpleDateFormat("dd/MM/yyyy", Locale.US)
-                        .format(cell.getDateCellValue());
-            }
-        } catch (Exception ignored) {
-            // Lanjut ke format biasa.
-        }
+            CellType type = cell.getCellType();
 
-        return formatter.formatCellValue(cell).trim();
+            // Untuk sel rumus, gunakan hasil terakhir yang tersimpan.
+            if (type == CellType.FORMULA) {
+                type = cell.getCachedFormulaResultType();
+            }
+
+            switch (type) {
+                case STRING:
+                    return cell.getStringCellValue().trim();
+
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell)) {
+                        return new SimpleDateFormat("dd/MM/yyyy", Locale.US)
+                                .format(cell.getDateCellValue());
+                    }
+                    return angkaPolos(cell.getNumericCellValue());
+
+                case BOOLEAN:
+                    return String.valueOf(cell.getBooleanCellValue());
+
+                default:
+                    return "";
+            }
+        } catch (Throwable t) {
+            // Jangan sampai satu sel aneh membuat seluruh file gagal dibuka.
+            return "";
+        }
+    }
+
+    /**
+     * Angka ditulis apa adanya, tanpa format Excel.
+     * Sengaja TIDAK memakai DataFormatter: pada format tertentu
+     * (misalnya format akuntansi) DataFormatter memanggil java.awt.Color
+     * yang tidak tersedia di Android sehingga aplikasi force close.
+     */
+    private static String angkaPolos(double angka) {
+        if (angka == Math.rint(angka) && Math.abs(angka) < 1e15) {
+            return String.valueOf((long) angka);
+        }
+        return java.math.BigDecimal.valueOf(angka)
+                .stripTrailingZeros()
+                .toPlainString();
     }
 
     /** Membaca beberapa sel dari satu sheet dengan sekali buka file. */
@@ -56,7 +89,6 @@ public class ExcelHelper {
                         "Sheet tidak ditemukan: " + sheetName);
             }
 
-            DataFormatter formatter = new DataFormatter();
 
             for (String alamat : cellAddresses) {
                 CellAddress address = new CellAddress(alamat);
@@ -65,7 +97,7 @@ public class ExcelHelper {
                         ? null
                         : row.getCell(address.getColumn());
 
-                result.put(alamat, cellText(cell, formatter));
+                result.put(alamat, cellText(cell));
             }
         }
 
@@ -98,18 +130,17 @@ public class ExcelHelper {
                         "Bukan file reimbursement: sheet Resume/Rincian tidak ditemukan.");
             }
 
-            DataFormatter formatter = new DataFormatter();
 
             for (String alamat : new String[]{"G10", "G11", "G12", "H20"}) {
                 CellAddress address = new CellAddress(alamat);
                 Row row = resume.getRow(address.getRow());
                 Cell cell = row == null ? null : row.getCell(address.getColumn());
-                data.resume.put(alamat, cellText(cell, formatter));
+                data.resume.put(alamat, cellText(cell));
             }
 
-            bacaBaris(rincian, 9, 37, formatter, data.material);
-            bacaBaris(rincian, 43, 49, formatter, data.jasa);
-            bacaBaris(rincian, 55, 117, formatter, data.operasional);
+            bacaBaris(rincian, 9, 37, data.material);
+            bacaBaris(rincian, 43, 49, data.jasa);
+            bacaBaris(rincian, 55, 117, data.operasional);
 
             Sheet lampiran = workbook.getSheet("Lampiran");
 
@@ -140,7 +171,6 @@ public class ExcelHelper {
             Sheet sheet,
             int firstRow,
             int lastRow,
-            DataFormatter formatter,
             List<List<String>> result
     ) {
         for (int r = firstRow - 1; r < lastRow; r++) {
@@ -149,7 +179,7 @@ public class ExcelHelper {
 
             for (int c = 0; c < 5; c++) {
                 Cell cell = row == null ? null : row.getCell(c);
-                values.add(cellText(cell, formatter));
+                values.add(cellText(cell));
             }
 
             result.add(values);
@@ -220,7 +250,6 @@ public class ExcelHelper {
                 );
             }
 
-            DataFormatter formatter = new DataFormatter();
 
             // Nomor baris dan kolom menggunakan indeks Excel mulai dari 1.
             for (int r = firstRow - 1; r < lastRow; r++) {
@@ -230,7 +259,7 @@ public class ExcelHelper {
                 for (int c = firstColumn - 1; c < lastColumn; c++) {
                     Cell cell = row == null ? null : row.getCell(c);
 
-                    values.add(cellText(cell, formatter));
+                    values.add(cellText(cell));
                 }
 
                 result.add(values);
@@ -260,7 +289,7 @@ public class ExcelHelper {
 
             Cell cell = row.getCell(address.getColumn());
 
-            return cellText(cell, new DataFormatter());
+            return cellText(cell);
         }
     }
 
