@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F3F9"
+    android:fillViewport="true"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="35dp"
+        android:padding="16dp">
+
+
+        <!-- HEADER -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_header"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AXIUS  •  EXPENSE MANAGEMENT"
+                android:textColor="#D5C4FF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.06" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Rembuse Apps"
+                android:textColor="#FFFFFF"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="Input dan rekap reimbursement"
+                android:textColor="#E0D9ED"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+        <!-- DATA AKTIVITAS -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="01  DATA AKTIVITAS"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editProject"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Nama proyek / aktivitas"
+                android:inputType="textCapSentences"
+                android:singleLine="true" />
+
+            <EditText
+                android:id="@+id/editPIC"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="PIC / penanggung jawab"
+                android:inputType="textCapWords"
+                android:singleLine="true" />
+
+            <EditText
+                android:id="@+id/editReimburseDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:hint="Tanggal reimburse"
+                android:inputType="none" />
+
+        </LinearLayout>
+
+        <!-- INPUT TRANSAKSI -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="02  INPUT TRANSAKSI"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Jenis transaksi"
+                android:textColor="#BEA8DB"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal"
+                android:weightSum="3">
+
+                <Button
+                    android:id="@+id/btnMaterial"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minWidth="0dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="7dp"
+                    android:text="Material"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnJasa"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minWidth="0dp"
+                    android:paddingLeft="2dp"
+                    android:paddingRight="2dp"
+                    android:text="Jasa"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnOperasional"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:paddingLeft="7dp"
+                    android:paddingRight="2dp"
+                    android:text="Operasional"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txtJenisTerpilih"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:padding="10dp"
+                android:background="#F0EAFB"
+                android:text="Jenis: Material"
+                android:textColor="#6741A5"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editPurchaseDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:clickable="true"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:hint="Tanggal pembelian"
+                android:inputType="none" />
+
+            <Spinner
+                android:id="@+id/spinnerKategori"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" />
+
+            <EditText
+                android:id="@+id/editUraian"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="top"
+                android:hint="Uraian pengeluaran"
+                android:inputType="textCapSentences|textMultiLine"
+                android:minLines="2" />
+
+            <EditText
+                android:id="@+id/editNominal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Nominal pengeluaran (Rp)"
+                android:inputType="numberDecimal" />
+
+            <Button
+                android:id="@+id/btnTambahTransaksi"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="14dp"
+                android:text="＋  Tambah Transaksi"
+                android:textAllCaps="false"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- REKAP -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="03  REKAP PENGELUARAN"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtTotalMaterial"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Material: Rp0"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/txtTotalJasa"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Jasa: Rp0"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/txtTotalOperasional"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Operasional: Rp0"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="14dp"
+                android:background="#E8E2EF" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_total"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TOTAL PENGELUARAN"
+                    android:textColor="#E0D4F9"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtTotalSemua"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="TOTAL: Rp0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="23sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txtDaftarTransaksi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_transaction_list"
+                android:lineSpacingExtra="3dp"
+                android:padding="14dp"
+                android:text="Belum ada transaksi."
+                android:textColor="#6640A4"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+        <!-- LAMPIRAN DAN FILE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="04  LAMPIRAN &amp; DOKUMEN"
+                android:textColor="@color/_40394b"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtJumlahFoto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:padding="10dp"
+                android:background="#F0EAFB"
+                android:text="Lampiran bon: 0 foto"
+                android:textColor="#6741A5"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnPilihFoto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Pilih Foto Bon dari Galeri"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/btnReopenExcel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Buka File Reimbursement"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/btnEksporExcel"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="6dp"
+                android:text="Ekspor ke Excel"
+                android:textAllCaps="false"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:padding="10dp"
+                android:text="Siap digunakan."
+                android:textColor="#625B6D"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

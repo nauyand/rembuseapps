@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Rembuseapps" parent="Theme.MaterialComponents.NoActionBar">>
+
+        <!-- Warna utama -->
+        <item name="colorPrimary">#6741A5</item>
+        <item name="colorPrimaryVariant">#49306F</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+
+        <!-- Aksen ungu -->
+        <item name="colorSecondary">#B69AF5</item>
+        <item name="colorSecondaryVariant">#9270D5</item>
+        <item name="colorOnSecondary">#17121F</item>
+
+        <!-- Background dark -->
+        <item name="android:windowBackground">#15131B</item>
+        <item name="android:statusBarColor">#15131B</item>
+        <item name="android:navigationBarColor">#15131B</item>
+
+        <!-- Ikon status bar tetap terang -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+    </style>
+</resources>
