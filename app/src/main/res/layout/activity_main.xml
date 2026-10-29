@@ -98,8 +98,9 @@
                 android:id="@+id/editKas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:digits="0123456789."
                 android:hint="Jumlah kas / uang muka (Rp)"
-                android:inputType="numberDecimal"
+                android:inputType="number"
                 android:singleLine="true" />
 
         </LinearLayout>
@@ -216,8 +217,59 @@
                 android:id="@+id/editNominal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:digits="0123456789."
                 android:hint="Nominal pengeluaran (Rp)"
-                android:inputType="numberDecimal" />
+                android:inputType="number" />
+
+            <!-- Foto bon untuk transaksi ini (opsional) -->
+            <TextView
+                android:id="@+id/txtFotoForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="#F0EAFB"
+                android:padding="10dp"
+                android:text="Foto bon (opsional): belum ada"
+                android:textColor="#6741A5"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnFotoKamera"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:text="Kamera"
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/btnFotoGaleri"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:text="Galeri"
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/btnFotoHapusForm"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:text="Lepas Foto"
+                    android:textAllCaps="false" />
+
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btnTambahTransaksi"
@@ -257,32 +309,12 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/txtTotalMaterial"
+            <!-- Diagram batang per jenis + pemakaian kas -->
+            <com.etdah.rembuseapps.RingkasanView
+                android:id="@+id/ringkasanView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="Material: Rp0"
-                android:textColor="@color/_40394b"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/txtTotalJasa"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Jasa: Rp0"
-                android:textColor="@color/_40394b"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/txtTotalOperasional"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Operasional: Rp0"
-                android:textColor="@color/_40394b"
-                android:textSize="14sp" />
+                android:layout_marginTop="14dp" />
 
             <View
                 android:layout_width="match_parent"
@@ -331,12 +363,33 @@
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
+            <!-- Filter & urutan daftar transaksi -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal">
+
+                <Spinner
+                    android:id="@+id/spinnerFilter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <Spinner
+                    android:id="@+id/spinnerUrut"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+            </LinearLayout>
+
             <!-- Daftar transaksi: setiap baris bisa diketuk untuk edit/hapus -->
             <LinearLayout
                 android:id="@+id/listTransaksi"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="6dp"
                 android:background="@drawable/bg_transaction_list"
                 android:orientation="vertical"
                 android:padding="6dp">
@@ -379,26 +432,56 @@
                 android:layout_marginTop="12dp"
                 android:padding="10dp"
                 android:background="#F0EAFB"
-                android:text="Lampiran bon: 0 foto"
+                android:text="Lampiran lain: 0 foto"
                 android:textColor="#6741A5"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/btnPilihFoto"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Pilih Foto Bon dari Galeri"
-                android:textAllCaps="false" />
+                android:layout_marginTop="6dp"
+                android:text="Untuk foto yang tidak terkait transaksi tertentu. Bon per transaksi ditambahkan di bagian Input Transaksi."
+                android:textColor="#8A8296"
+                android:textSize="12sp" />
 
-            <Button
-                android:id="@+id/btnHapusFoto"
-                style="?attr/borderlessButtonStyle"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Hapus Semua Foto"
-                android:textAllCaps="false" />
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnKameraLain"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:text="Kamera"
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/btnPilihFoto"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:text="Galeri"
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/btnHapusFoto"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:text="Hapus"
+                    android:textAllCaps="false" />
+
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btnReopenExcel"
@@ -409,6 +492,14 @@
                 android:textAllCaps="false" />
 
             <Button
+                android:id="@+id/btnRiwayat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Riwayat Ekspor"
+                android:textAllCaps="false" />
+
+            <Button
                 android:id="@+id/btnEksporExcel"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
@@ -416,6 +507,15 @@
                 android:text="Ekspor ke Excel"
                 android:textAllCaps="false"
                 android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnBagikan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Bagikan File Terakhir"
+                android:textAllCaps="false"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/txtStatus"

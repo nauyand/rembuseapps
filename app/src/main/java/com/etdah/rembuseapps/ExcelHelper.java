@@ -1,28 +1,76 @@
 package com.etdah.rembuseapps;
 
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.ClientAnchor;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Drawing;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellAddress;
-import org.apache.poi.util.IOUtils;
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFPicture;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFShape;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.List;
-import java.util.Map;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 public class ExcelHelper {
 
+    /** Ukuran 1 piksel dalam satuan EMU (dipakai posisi gambar di Excel). */
+    private static final int EMU_PER_PIKSEL = 9525;
+
+    /** Tinggi foto di sheet Lampiran (piksel). */
+    private static final float TINGGI_FOTO = 420f;
+
+    /** Lebar maksimal foto di sheet Lampiran (piksel). */
+    private static final float LEBAR_MAKS_FOTO = 700f;
+
+    /** Satu gambar beserta keterangannya. */
+    public static class Gambar {
+        public final byte[] data;
+        public final int lebar;
+        public final int tinggi;
+        public final String keterangan;
+
+        public Gambar(byte[] data, int lebar, int tinggi, String keterangan) {
+            this.data = data;
+            this.lebar = lebar;
+            this.tinggi = tinggi;
+            this.keterangan = keterangan == null ? "" : keterangan;
+        }
+    }
+
+    /** Semua data yang dibaca dari file reimbursement. */
+    public static class ReimburseData {
+        public final Map<String, String> resume = new LinkedHashMap<>();
+        public final List<List<String>> material = new ArrayList<>();
+        public final List<List<String>> jasa = new ArrayList<>();
+        public final List<List<String>> operasional = new ArrayList<>();
+        public final List<Gambar> photos = new ArrayList<>();
+    }
+
+    // =====================================================================
+    // Membaca
+    // =====================================================================
+
     /**
-     * Mengambil teks sel. Sel bertipe tanggal selalu dikembalikan
-     * sebagai dd/MM/yyyy agar tahunnya tidak hilang (misalnya jika
-     * format sel di Excel hanya "d-mmm").
+     * Mengambil teks sel. Sengaja TIDAK memakai DataFormatter: pada format
+     * tertentu (misalnya format akuntansi) DataFormatter memanggil
+     * java.awt.Color yang tidak ada di Android sehingga aplikasi crash.
+     * Tanggal selalu dikembalikan sebagai dd/MM/yyyy.
      */
     private static String cellText(Cell cell) {
         if (cell == null) return "";
@@ -58,12 +106,6 @@ public class ExcelHelper {
         }
     }
 
-    /**
-     * Angka ditulis apa adanya, tanpa format Excel.
-     * Sengaja TIDAK memakai DataFormatter: pada format tertentu
-     * (misalnya format akuntansi) DataFormatter memanggil java.awt.Color
-     * yang tidak tersedia di Android sehingga aplikasi force close.
-     */
     private static String angkaPolos(double angka) {
         if (angka == Math.rint(angka) && Math.abs(angka) < 1e15) {
             return String.valueOf((long) angka);
@@ -73,14 +115,18 @@ public class ExcelHelper {
                 .toPlainString();
     }
 
-    /** Membaca beberapa sel dari satu sheet dengan sekali buka file. */
-    public static Map<String, String> readCells(
+    private static String teksSel(Sheet sheet, int baris, int kolom) {
+        if (baris < 0) return "";
+        Row row = sheet.getRow(baris);
+        return row == null ? "" : cellText(row.getCell(kolom));
+    }
+
+    /** Membaca satu sel (dipakai untuk verifikasi hasil ekspor). */
+    public static String readCell(
             InputStream input,
             String sheetName,
-            String... cellAddresses
+            String cellAddress
     ) throws Exception {
-        Map<String, String> result = new LinkedHashMap<>();
-
         try (Workbook workbook = WorkbookFactory.create(input)) {
             Sheet sheet = workbook.getSheet(sheetName);
 
@@ -89,34 +135,14 @@ public class ExcelHelper {
                         "Sheet tidak ditemukan: " + sheetName);
             }
 
-
-            for (String alamat : cellAddresses) {
-                CellAddress address = new CellAddress(alamat);
-                Row row = sheet.getRow(address.getRow());
-                Cell cell = row == null
-                        ? null
-                        : row.getCell(address.getColumn());
-
-                result.put(alamat, cellText(cell));
-            }
+            CellAddress address = new CellAddress(cellAddress);
+            return teksSel(sheet, address.getRow(), address.getColumn());
         }
-
-        return result;
-    }
-
-    /** Semua data yang dibaca dari file reimbursement. */
-    public static class ReimburseData {
-        public final Map<String, String> resume = new LinkedHashMap<>();
-        public final List<List<String>> material = new ArrayList<>();
-        public final List<List<String>> jasa = new ArrayList<>();
-        public final List<List<String>> operasional = new ArrayList<>();
-        public final List<byte[]> photos = new ArrayList<>();
     }
 
     /**
      * Membaca seluruh isi file reimbursement dengan SEKALI buka.
-     * File dibuka langsung dari disk dalam mode baca-saja agar hemat
-     * memori (penting jika ada banyak foto bon berukuran besar).
+     * File dibuka langsung dari disk dalam mode baca-saja agar hemat memori.
      */
     public static ReimburseData readReimbursement(File file) throws Exception {
         ReimburseData data = new ReimburseData();
@@ -130,12 +156,10 @@ public class ExcelHelper {
                         "Bukan file reimbursement: sheet Resume/Rincian tidak ditemukan.");
             }
 
-
             for (String alamat : new String[]{"G10", "G11", "G12", "H20"}) {
                 CellAddress address = new CellAddress(alamat);
-                Row row = resume.getRow(address.getRow());
-                Cell cell = row == null ? null : row.getCell(address.getColumn());
-                data.resume.put(alamat, cellText(cell));
+                data.resume.put(alamat,
+                        teksSel(resume, address.getRow(), address.getColumn()));
             }
 
             bacaBaris(rincian, 9, 37, data.material);
@@ -149,15 +173,23 @@ public class ExcelHelper {
 
                 if (drawing != null) {
                     for (XSSFShape shape : drawing.getShapes()) {
-                        if (shape instanceof XSSFPicture) {
-                            byte[] imageData = ((XSSFPicture) shape)
-                                    .getPictureData()
-                                    .getData();
+                        if (!(shape instanceof XSSFPicture)) continue;
 
-                            if (imageData != null && imageData.length > 0) {
-                                data.photos.add(imageData);
-                            }
+                        XSSFPicture gambar = (XSSFPicture) shape;
+                        byte[] isi = gambar.getPictureData().getData();
+
+                        if (isi == null || isi.length == 0) continue;
+
+                        // Keterangan ditulis satu baris di atas foto.
+                        String keterangan = "";
+                        try {
+                            XSSFClientAnchor anchor = gambar.getClientAnchor();
+                            keterangan = teksSel(lampiran, anchor.getRow1() - 1, 0);
+                        } catch (Throwable ignored) {
+                            // File lama tanpa keterangan.
                         }
+
+                        data.photos.add(new Gambar(isi, 0, 0, keterangan));
                     }
                 }
             }
@@ -175,155 +207,27 @@ public class ExcelHelper {
     ) {
         for (int r = firstRow - 1; r < lastRow; r++) {
             List<String> values = new ArrayList<>();
-            Row row = sheet.getRow(r);
 
             for (int c = 0; c < 5; c++) {
-                Cell cell = row == null ? null : row.getCell(c);
-                values.add(cellText(cell));
+                values.add(teksSel(sheet, r, c));
             }
 
             result.add(values);
         }
     }
 
-    public static List<byte[]> readPictures(
-            InputStream input,
-            String sheetName
-    ) throws Exception {
-
-        List<byte[]> photos = new ArrayList<>();
-
-        try (Workbook workbook = WorkbookFactory.create(input)) {
-            if (!(workbook instanceof XSSFWorkbook)) {
-                throw new Exception("File harus berformat Excel .xlsx");
-            }
-
-            XSSFSheet sheet =
-                    ((XSSFWorkbook) workbook).getSheet(sheetName);
-
-            if (sheet == null) {
-                throw new Exception(
-                        "Sheet tidak ditemukan: " + sheetName
-                );
-            }
-
-            XSSFDrawing drawing = sheet.getDrawingPatriarch();
-
-            if (drawing == null) {
-                return photos;
-            }
-
-            for (XSSFShape shape : drawing.getShapes()) {
-                if (shape instanceof XSSFPicture) {
-                    byte[] imageData =
-                            ((XSSFPicture) shape)
-                                    .getPictureData()
-                                    .getData();
-
-                    if (imageData != null && imageData.length > 0) {
-                        photos.add(imageData);
-                    }
-                }
-            }
-        }
-
-        return photos;
-    }
-
-    public static List<List<String>> readRange(
-            InputStream input,
-            String sheetName,
-            int firstRow,
-            int lastRow,
-            int firstColumn,
-            int lastColumn
-    ) throws Exception {
-
-        List<List<String>> result = new ArrayList<>();
-
-        try (Workbook workbook = WorkbookFactory.create(input)) {
-            Sheet sheet = workbook.getSheet(sheetName);
-
-            if (sheet == null) {
-                throw new IllegalArgumentException(
-                        "Sheet tidak ditemukan: " + sheetName
-                );
-            }
-
-
-            // Nomor baris dan kolom menggunakan indeks Excel mulai dari 1.
-            for (int r = firstRow - 1; r < lastRow; r++) {
-                List<String> values = new ArrayList<>();
-                Row row = sheet.getRow(r);
-
-                for (int c = firstColumn - 1; c < lastColumn; c++) {
-                    Cell cell = row == null ? null : row.getCell(c);
-
-                    values.add(cellText(cell));
-                }
-
-                result.add(values);
-            }
-        }
-
-        return result;
-    }
-
-    public static String readCell(
-            InputStream input,
-            String sheetName,
-            String cellAddress
-    ) throws Exception {
-        try (Workbook workbook = WorkbookFactory.create(input)) {
-            Sheet sheet = workbook.getSheet(sheetName);
-
-            if (sheet == null) {
-                throw new IllegalArgumentException(
-                        "Sheet tidak ditemukan: " + sheetName);
-            }
-
-            CellAddress address = new CellAddress(cellAddress);
-            Row row = sheet.getRow(address.getRow());
-
-            if (row == null) return "";
-
-            Cell cell = row.getCell(address.getColumn());
-
-            return cellText(cell);
-        }
-    }
-
-    public static void writeCells(
-            InputStream templateInput,
-            OutputStream output,
-            String sheetName,
-            Map<String, Object> values
-    ) throws Exception {
-        Map<String, Map<String, Object>> allValues =
-                new LinkedHashMap<>();
-
-        allValues.put(sheetName, values);
-
-        writeWorkbook(templateInput, output, allValues, null);
-    }
-
-    public static void writeMultipleSheets(
-            InputStream templateInput,
-            OutputStream output,
-            Map<String, Map<String, Object>> allValues
-    ) throws Exception {
-        writeWorkbook(templateInput, output, allValues, null);
-    }
+    // =====================================================================
+    // Menulis
+    // =====================================================================
 
     public static void writeWorkbook(
             InputStream templateInput,
             OutputStream output,
             Map<String, Map<String, Object>> allValues,
-            List<byte[]> photos
+            List<Gambar> photos
     ) throws Exception {
 
-        try (Workbook workbook =
-                     WorkbookFactory.create(templateInput)) {
+        try (Workbook workbook = WorkbookFactory.create(templateInput)) {
 
             // 1. Tulis data sel pada semua sheet.
             for (Map.Entry<String, Map<String, Object>> sheetEntry
@@ -333,44 +237,20 @@ public class ExcelHelper {
 
                 if (sheet == null) {
                     throw new IllegalArgumentException(
-                            "Sheet tidak ditemukan: "
-                                    + sheetEntry.getKey());
+                            "Sheet tidak ditemukan: " + sheetEntry.getKey());
                 }
 
                 for (Map.Entry<String, Object> entry
                         : sheetEntry.getValue().entrySet()) {
 
-                    CellAddress address =
-                            new CellAddress(entry.getKey());
-
-                    Row row = sheet.getRow(address.getRow());
-
-                    if (row == null) {
-                        row = sheet.createRow(address.getRow());
-                    }
-
-                    Cell cell = row.getCell(address.getColumn());
-
-                    if (cell == null) {
-                        cell = row.createCell(address.getColumn());
-                    }
-
-                    Object value = entry.getValue();
-
-                    if (value == null) {
-                        cell.setBlank();
-                    } else if (value instanceof Number) {
-                        cell.setCellValue(
-                                ((Number) value).doubleValue());
-                    } else if (value instanceof Boolean) {
-                        cell.setCellValue((Boolean) value);
-                    } else {
-                        cell.setCellValue(value.toString());
-                    }
+                    CellAddress address = new CellAddress(entry.getKey());
+                    tulisSel(sheet, address.getRow(), address.getColumn(),
+                            entry.getValue());
                 }
             }
 
-            // 2. Sisipkan foto bon pada sheet Lampiran.
+            // 2. Sisipkan foto bon pada sheet Lampiran, masing-masing
+            //    dengan keterangan di atasnya dan proporsi aslinya.
             if (photos != null && !photos.isEmpty()) {
                 Sheet lampiran = workbook.getSheet("Lampiran");
 
@@ -382,41 +262,76 @@ public class ExcelHelper {
                 Drawing<?> drawing = lampiran.createDrawingPatriarch();
                 CreationHelper helper = workbook.getCreationHelper();
 
-                for (int i = 0; i < photos.size(); i++) {
-                    byte[] imageBytes = photos.get(i);
+                float tinggiBaris = lampiran.getDefaultRowHeightInPoints() * 96f / 72f;
+                if (tinggiBaris <= 0) tinggiBaris = 20f;
 
-                    if (imageBytes == null || imageBytes.length == 0) {
+                int baris = 0;
+
+                for (Gambar foto : photos) {
+                    if (foto == null || foto.data == null || foto.data.length == 0) {
                         continue;
                     }
 
-                    int pictureType = isPng(imageBytes)
+                    // Keterangan foto.
+                    tulisSel(lampiran, baris, 0, foto.keterangan);
+
+                    int pictureType = isPng(foto.data)
                             ? Workbook.PICTURE_TYPE_PNG
                             : Workbook.PICTURE_TYPE_JPEG;
 
-                    int pictureIndex = workbook.addPicture(
-                            imageBytes, pictureType);
+                    int pictureIndex = workbook.addPicture(foto.data, pictureType);
 
-                    ClientAnchor anchor =
-                            helper.createClientAnchor();
+                    // Hitung ukuran agar foto tidak gepeng.
+                    float rasio = foto.lebar > 0 && foto.tinggi > 0
+                            ? (float) foto.lebar / foto.tinggi
+                            : 0.75f;
 
-                    // Setiap foto mendapat area sendiri:
-                    // kolom A-F, dengan jarak 20 baris.
-                    int startRow = i * 20;
+                    float tinggi = TINGGI_FOTO;
+                    float lebar = tinggi * rasio;
 
+                    if (lebar > LEBAR_MAKS_FOTO) {
+                        lebar = LEBAR_MAKS_FOTO;
+                        tinggi = lebar / rasio;
+                    }
+
+                    int barisAwal = baris + 1;
+
+                    ClientAnchor anchor = helper.createClientAnchor();
                     anchor.setCol1(0);
-                    anchor.setRow1(startRow);
-                    anchor.setCol2(6);
-                    anchor.setRow2(startRow + 16);
-                    anchor.setAnchorType(
-                            ClientAnchor.AnchorType.MOVE_AND_RESIZE);
+                    anchor.setRow1(barisAwal);
+                    anchor.setDx1(0);
+                    anchor.setDy1(0);
+
+                    // Kolom akhir + sisa piksel.
+                    int kolom = 0;
+                    float sisaLebar = lebar;
+                    while (true) {
+                        float lebarKolom = lampiran.getColumnWidthInPixels(kolom);
+                        if (lebarKolom <= 0) lebarKolom = 64f;
+                        if (sisaLebar <= lebarKolom || kolom > 50) break;
+                        sisaLebar -= lebarKolom;
+                        kolom++;
+                    }
+                    anchor.setCol2(kolom);
+                    anchor.setDx2(Math.round(sisaLebar * EMU_PER_PIKSEL));
+
+                    // Baris akhir + sisa piksel.
+                    int jumlahBarisPenuh = (int) (tinggi / tinggiBaris);
+                    float sisaTinggi = tinggi - jumlahBarisPenuh * tinggiBaris;
+                    anchor.setRow2(barisAwal + jumlahBarisPenuh);
+                    anchor.setDy2(Math.round(sisaTinggi * EMU_PER_PIKSEL));
+
+                    anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE);
 
                     drawing.createPicture(anchor, pictureIndex);
+
+                    // Foto berikutnya: beri jarak 2 baris.
+                    baris = barisAwal + jumlahBarisPenuh + 3;
                 }
             }
 
-            // 3. Hitung ulang rumus template (total, saldo) agar
-            //    nilainya langsung tampil, dan minta Excel menghitung
-            //    ulang saat file dibuka.
+            // 3. Hitung ulang rumus template (total, saldo) agar nilainya
+            //    langsung tampil, dan minta Excel menghitung ulang saat dibuka.
             workbook.setForceFormulaRecalculation(true);
 
             try {
@@ -425,15 +340,30 @@ public class ExcelHelper {
                         .evaluateAll();
             } catch (Throwable t) {
                 // Tidak fatal: Excel tetap menghitung ulang saat dibuka.
-                android.util.Log.w(
-                        "REMBUSE_EXCEL",
-                        "Evaluasi rumus dilewati",
-                        t);
+                android.util.Log.w("REMBUSE_EXCEL", "Evaluasi rumus dilewati", t);
             }
 
             // 4. Simpan workbook sekali saja.
             workbook.write(output);
             output.flush();
+        }
+    }
+
+    private static void tulisSel(Sheet sheet, int baris, int kolom, Object value) {
+        Row row = sheet.getRow(baris);
+        if (row == null) row = sheet.createRow(baris);
+
+        Cell cell = row.getCell(kolom);
+        if (cell == null) cell = row.createCell(kolom);
+
+        if (value == null) {
+            cell.setBlank();
+        } else if (value instanceof Number) {
+            cell.setCellValue(((Number) value).doubleValue());
+        } else if (value instanceof Boolean) {
+            cell.setCellValue((Boolean) value);
+        } else {
+            cell.setCellValue(value.toString());
         }
     }
 
