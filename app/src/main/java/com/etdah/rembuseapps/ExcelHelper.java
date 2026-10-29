@@ -8,13 +8,153 @@ import org.apache.poi.xssf.usermodel.XSSFPicture;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFShape;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 public class ExcelHelper {
+
+    /**
+     * Mengambil teks sel. Sel bertipe tanggal selalu dikembalikan
+     * sebagai dd/MM/yyyy agar tahunnya tidak hilang (misalnya jika
+     * format sel di Excel hanya "d-mmm").
+     */
+    private static String cellText(Cell cell, DataFormatter formatter) {
+        if (cell == null) return "";
+
+        try {
+            if (cell.getCellType() == CellType.NUMERIC
+                    && DateUtil.isCellDateFormatted(cell)) {
+                return new SimpleDateFormat("dd/MM/yyyy", Locale.US)
+                        .format(cell.getDateCellValue());
+            }
+        } catch (Exception ignored) {
+            // Lanjut ke format biasa.
+        }
+
+        return formatter.formatCellValue(cell).trim();
+    }
+
+    /** Membaca beberapa sel dari satu sheet dengan sekali buka file. */
+    public static Map<String, String> readCells(
+            InputStream input,
+            String sheetName,
+            String... cellAddresses
+    ) throws Exception {
+        Map<String, String> result = new LinkedHashMap<>();
+
+        try (Workbook workbook = WorkbookFactory.create(input)) {
+            Sheet sheet = workbook.getSheet(sheetName);
+
+            if (sheet == null) {
+                throw new IllegalArgumentException(
+                        "Sheet tidak ditemukan: " + sheetName);
+            }
+
+            DataFormatter formatter = new DataFormatter();
+
+            for (String alamat : cellAddresses) {
+                CellAddress address = new CellAddress(alamat);
+                Row row = sheet.getRow(address.getRow());
+                Cell cell = row == null
+                        ? null
+                        : row.getCell(address.getColumn());
+
+                result.put(alamat, cellText(cell, formatter));
+            }
+        }
+
+        return result;
+    }
+
+    /** Semua data yang dibaca dari file reimbursement. */
+    public static class ReimburseData {
+        public final Map<String, String> resume = new LinkedHashMap<>();
+        public final List<List<String>> material = new ArrayList<>();
+        public final List<List<String>> jasa = new ArrayList<>();
+        public final List<List<String>> operasional = new ArrayList<>();
+        public final List<byte[]> photos = new ArrayList<>();
+    }
+
+    /**
+     * Membaca seluruh isi file reimbursement dengan SEKALI buka.
+     * File dibuka langsung dari disk dalam mode baca-saja agar hemat
+     * memori (penting jika ada banyak foto bon berukuran besar).
+     */
+    public static ReimburseData readReimbursement(File file) throws Exception {
+        ReimburseData data = new ReimburseData();
+
+        try (Workbook workbook = WorkbookFactory.create(file, null, true)) {
+            Sheet resume = workbook.getSheet("Resume");
+            Sheet rincian = workbook.getSheet("Rincian");
+
+            if (resume == null || rincian == null) {
+                throw new Exception(
+                        "Bukan file reimbursement: sheet Resume/Rincian tidak ditemukan.");
+            }
+
+            DataFormatter formatter = new DataFormatter();
+
+            for (String alamat : new String[]{"G10", "G11", "G12", "H20"}) {
+                CellAddress address = new CellAddress(alamat);
+                Row row = resume.getRow(address.getRow());
+                Cell cell = row == null ? null : row.getCell(address.getColumn());
+                data.resume.put(alamat, cellText(cell, formatter));
+            }
+
+            bacaBaris(rincian, 9, 37, formatter, data.material);
+            bacaBaris(rincian, 43, 49, formatter, data.jasa);
+            bacaBaris(rincian, 55, 117, formatter, data.operasional);
+
+            Sheet lampiran = workbook.getSheet("Lampiran");
+
+            if (lampiran instanceof XSSFSheet) {
+                XSSFDrawing drawing = ((XSSFSheet) lampiran).getDrawingPatriarch();
+
+                if (drawing != null) {
+                    for (XSSFShape shape : drawing.getShapes()) {
+                        if (shape instanceof XSSFPicture) {
+                            byte[] imageData = ((XSSFPicture) shape)
+                                    .getPictureData()
+                                    .getData();
+
+                            if (imageData != null && imageData.length > 0) {
+                                data.photos.add(imageData);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return data;
+    }
+
+    /** Membaca kolom A-E dari baris pertama s/d terakhir (nomor baris Excel). */
+    private static void bacaBaris(
+            Sheet sheet,
+            int firstRow,
+            int lastRow,
+            DataFormatter formatter,
+            List<List<String>> result
+    ) {
+        for (int r = firstRow - 1; r < lastRow; r++) {
+            List<String> values = new ArrayList<>();
+            Row row = sheet.getRow(r);
+
+            for (int c = 0; c < 5; c++) {
+                Cell cell = row == null ? null : row.getCell(c);
+                values.add(cellText(cell, formatter));
+            }
+
+            result.add(values);
+        }
+    }
 
     public static List<byte[]> readPictures(
             InputStream input,
@@ -29,11 +169,11 @@ public class ExcelHelper {
             }
 
             XSSFSheet sheet =
-                    ((XSSFWorkbook) workbook).getSheet("Lampiran");
+                    ((XSSFWorkbook) workbook).getSheet(sheetName);
 
             if (sheet == null) {
                 throw new Exception(
-                        "Sheet tidak ditemukan: " + "Lampiran"
+                        "Sheet tidak ditemukan: " + sheetName
                 );
             }
 
@@ -90,11 +230,7 @@ public class ExcelHelper {
                 for (int c = firstColumn - 1; c < lastColumn; c++) {
                     Cell cell = row == null ? null : row.getCell(c);
 
-                    values.add(
-                            cell == null
-                                    ? ""
-                                    : formatter.formatCellValue(cell).trim()
-                    );
+                    values.add(cellText(cell, formatter));
                 }
 
                 result.add(values);
@@ -124,9 +260,7 @@ public class ExcelHelper {
 
             Cell cell = row.getCell(address.getColumn());
 
-            if (cell == null) return "";
-
-            return new DataFormatter().formatCellValue(cell);
+            return cellText(cell, new DataFormatter());
         }
     }
 
@@ -251,7 +385,24 @@ public class ExcelHelper {
                 }
             }
 
-            // 3. Simpan workbook sekali saja.
+            // 3. Hitung ulang rumus template (total, saldo) agar
+            //    nilainya langsung tampil, dan minta Excel menghitung
+            //    ulang saat file dibuka.
+            workbook.setForceFormulaRecalculation(true);
+
+            try {
+                workbook.getCreationHelper()
+                        .createFormulaEvaluator()
+                        .evaluateAll();
+            } catch (Throwable t) {
+                // Tidak fatal: Excel tetap menghitung ulang saat dibuka.
+                android.util.Log.w(
+                        "REMBUSE_EXCEL",
+                        "Evaluasi rumus dilewati",
+                        t);
+            }
+
+            // 4. Simpan workbook sekali saja.
             workbook.write(output);
             output.flush();
         }
