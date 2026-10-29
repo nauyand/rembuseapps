@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_input"
+        android:icon="@drawable/ic_nav_input"
+        android:title="Input" />
+    <item
+        android:id="@+id/nav_rekap"
+        android:icon="@drawable/ic_nav_rekap"
+        android:title="Rekap" />
+    <item
+        android:id="@+id/nav_file"
+        android:icon="@drawable/ic_nav_file"
+        android:title="File" />
+</menu>

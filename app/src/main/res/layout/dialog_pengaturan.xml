@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="24dp"
+        android:paddingTop="8dp"
+        android:paddingRight="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Nama perusahaan"
+            android:textColor="#6741A5"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editSetPerusahaan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Contoh: PT Maju Jaya"
+            android:inputType="textCapCharacters"
+            android:singleLine="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tampil di header aplikasi dan judul file Excel."
+            android:textColor="#8A8296"
+            android:textSize="11sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="PIC default"
+            android:textColor="#6741A5"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editSetPIC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Terisi otomatis di reimbursement baru"
+            android:inputType="textCapWords"
+            android:singleLine="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Kas default (Rp)"
+            android:textColor="#6741A5"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editSetKas"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:digits="0123456789."
+            android:hint="Contoh: 3.000.000"
+            android:inputType="number"
+            android:singleLine="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Kategori (pisahkan dengan koma)"
+            android:textColor="#6741A5"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editSetKatMaterial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Material"
+            android:inputType="textCapWords|textMultiLine" />
+
+        <EditText
+            android:id="@+id/editSetKatJasa"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Jasa"
+            android:inputType="textCapWords|textMultiLine" />
+
+        <EditText
+            android:id="@+id/editSetKatOperasional"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Operasional"
+            android:inputType="textCapWords|textMultiLine" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Kolom yang dikosongkan akan kembali ke kategori bawaan."
+            android:textColor="#8A8296"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+
+</ScrollView>

@@ -20,6 +20,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,6 +30,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+
+import com.google.android.material.badge.BadgeDrawable;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -67,9 +71,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String MIME_XLSX =
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    /** Nilai kas awal jika belum pernah diisi. */
-    private static final double KAS_DEFAULT = 3000000.0;
-
     /** File draf agar data tidak hilang saat layar diputar / app ditutup. */
     private static final String DRAFT_FILE = "draft.json";
 
@@ -81,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String KEY_EDIT_INDEX = "editIndex";
     private static final String KEY_TUJUAN_FOTO = "tujuanFoto";
+    private static final String KEY_HALAMAN = "halaman";
 
     private static final String TUJUAN_FORM = "form";
     private static final String TUJUAN_UMUM = "umum";
@@ -120,6 +122,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView txtDaftarTransaksi, txtStatus, txtJumlahFoto;
     private LinearLayout listTransaksi;
     private RingkasanView ringkasanView;
+    private TextView txtNamaPerusahaan;
+    private ScrollView scrollUtama;
+    private BottomNavigationView navigasiBawah;
+    private View halamanInput, halamanRekap, halamanFile;
     private Button btnMaterial, btnJasa, btnOperasional;
     private Button btnTambahTransaksi, btnBatalEdit, btnBagikan;
 
@@ -144,6 +150,10 @@ public class MainActivity extends AppCompatActivity {
     private String terakhirEksporNama = "";
 
     private RiwayatEkspor riwayat;
+    private Pengaturan pengaturan;
+
+    /** Tab yang sedang tampil (id item menu navigasi). */
+    private int halamanAktif;
 
     private ActivityResultLauncher<String[]> reopenExcelPicker;
     private ActivityResultLauncher<String[]> galeriPicker;
@@ -159,12 +169,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         riwayat = new RiwayatEkspor(getFilesDir());
+        pengaturan = new Pengaturan(this);
+        halamanAktif = R.id.nav_input;
 
         if (savedInstanceState != null) {
             tujuanFoto = savedInstanceState.getString(KEY_TUJUAN_FOTO, TUJUAN_FORM);
+            halamanAktif = savedInstanceState.getInt(KEY_HALAMAN, R.id.nav_input);
         }
 
         hubungkanKomponen();
+        aturNavigasi();
+        terapkanNamaPerusahaan();
         daftarkanLauncher();
         aturTombol();
         aturPemilihTanggal();
@@ -203,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         outState.putInt(KEY_EDIT_INDEX, editIndex);
         outState.putString(KEY_TUJUAN_FOTO, tujuanFoto);
+        outState.putInt(KEY_HALAMAN, halamanAktif);
     }
 
     @Override
@@ -237,6 +253,12 @@ public class MainActivity extends AppCompatActivity {
         txtJumlahFoto = findViewById(R.id.txtJumlahFoto);
         listTransaksi = findViewById(R.id.listTransaksi);
         ringkasanView = findViewById(R.id.ringkasanView);
+        txtNamaPerusahaan = findViewById(R.id.txtNamaPerusahaan);
+        scrollUtama = findViewById(R.id.scrollUtama);
+        navigasiBawah = findViewById(R.id.navigasiBawah);
+        halamanInput = findViewById(R.id.halamanInput);
+        halamanRekap = findViewById(R.id.halamanRekap);
+        halamanFile = findViewById(R.id.halamanFile);
 
         btnMaterial = findViewById(R.id.btnMaterial);
         btnJasa = findViewById(R.id.btnJasa);
@@ -309,6 +331,127 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnMulaiBaru).setOnClickListener(v -> konfirmasiMulaiBaru());
+        findViewById(R.id.btnPengaturan).setOnClickListener(v -> tampilkanPengaturan());
+    }
+
+    // =====================================================================
+    // FITUR 10: Tab Input / Rekap / File
+    // =====================================================================
+
+    private void aturNavigasi() {
+        navigasiBawah.setOnItemSelectedListener(item -> {
+            tampilkanHalaman(item.getItemId());
+            return true;
+        });
+
+        navigasiBawah.setSelectedItemId(halamanAktif);
+        tampilkanHalaman(halamanAktif);
+    }
+
+    private void tampilkanHalaman(int idMenu) {
+        // Catatan: id resource tidak boleh dipakai di switch (AGP 8+),
+        // jadi memakai if-else.
+        if (idMenu != R.id.nav_rekap && idMenu != R.id.nav_file) {
+            idMenu = R.id.nav_input;
+        }
+
+        boolean berubah = idMenu != halamanAktif;
+        halamanAktif = idMenu;
+
+        halamanInput.setVisibility(idMenu == R.id.nav_input ? View.VISIBLE : View.GONE);
+        halamanRekap.setVisibility(idMenu == R.id.nav_rekap ? View.VISIBLE : View.GONE);
+        halamanFile.setVisibility(idMenu == R.id.nav_file ? View.VISIBLE : View.GONE);
+
+        if (berubah) scrollUtama.scrollTo(0, 0);
+    }
+
+    /** Pindah tab dari kode (misalnya saat mengedit dari halaman Rekap). */
+    private void pindahHalaman(int idMenu) {
+        if (navigasiBawah.getSelectedItemId() != idMenu) {
+            navigasiBawah.setSelectedItemId(idMenu);
+        } else {
+            tampilkanHalaman(idMenu);
+        }
+    }
+
+    /** Angka jumlah transaksi di ikon tab Rekap. */
+    private void perbaruiBadgeRekap() {
+        BadgeDrawable badge = navigasiBawah.getOrCreateBadge(R.id.nav_rekap);
+        badge.setVisible(!transaksiList.isEmpty());
+        badge.setNumber(transaksiList.size());
+        badge.setBackgroundColor(Color.parseColor("#6741A5"));
+    }
+
+    // =====================================================================
+    // FITUR 8: Pengaturan
+    // =====================================================================
+
+    private void terapkanNamaPerusahaan() {
+        String nama = pengaturan.namaPerusahaan();
+        txtNamaPerusahaan.setText(
+                (nama.isEmpty() ? "REMBUSE" : nama.toUpperCase(localeIndonesia))
+                        + "  •  REIMBURSEMENT");
+    }
+
+    private void tampilkanPengaturan() {
+        View tampilan = getLayoutInflater().inflate(R.layout.dialog_pengaturan, null);
+
+        EditText editPerusahaan = tampilan.findViewById(R.id.editSetPerusahaan);
+        EditText editPicDefault = tampilan.findViewById(R.id.editSetPIC);
+        EditText editKasDefault = tampilan.findViewById(R.id.editSetKas);
+        EditText editKatMaterial = tampilan.findViewById(R.id.editSetKatMaterial);
+        EditText editKatJasa = tampilan.findViewById(R.id.editSetKatJasa);
+        EditText editKatOperasional = tampilan.findViewById(R.id.editSetKatOperasional);
+
+        editPerusahaan.setText(pengaturan.namaPerusahaan());
+        editPicDefault.setText(pengaturan.picDefault());
+        editKasDefault.setText(angkaUntukInput(pengaturan.kasDefault()));
+        editKatMaterial.setText(pengaturan.kategoriTeks("Material"));
+        editKatJasa.setText(pengaturan.kategoriTeks("Jasa"));
+        editKatOperasional.setText(pengaturan.kategoriTeks("Operasional"));
+
+        editKasDefault.addTextChangedListener(new FormatRibuan(editKasDefault, null));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Pengaturan")
+                .setView(tampilan)
+                .setPositiveButton("Simpan", (d, w) -> {
+                    pengaturan.simpan(
+                            editPerusahaan.getText().toString(),
+                            editPicDefault.getText().toString(),
+                            parseAngka(editKasDefault.getText().toString()),
+                            editKatMaterial.getText().toString(),
+                            editKatJasa.getText().toString(),
+                            editKatOperasional.getText().toString());
+                    setelahPengaturanBerubah();
+                    Toast.makeText(this, "Pengaturan disimpan", Toast.LENGTH_SHORT).show();
+                })
+                .setNeutralButton("Kembalikan Bawaan", (d, w) ->
+                        new AlertDialog.Builder(this)
+                                .setTitle("Kembalikan pengaturan bawaan?")
+                                .setMessage("Nama perusahaan, PIC default, kas default, "
+                                        + "dan kategori kembali seperti semula. "
+                                        + "Transaksi yang sudah ada tidak berubah.")
+                                .setPositiveButton("Kembalikan", (d2, w2) -> {
+                                    pengaturan.kembalikanBawaan();
+                                    setelahPengaturanBerubah();
+                                })
+                                .setNegativeButton("Batal", null)
+                                .show())
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void setelahPengaturanBerubah() {
+        terapkanNamaPerusahaan();
+
+        // Pertahankan kategori yang sedang dipilih jika masih ada.
+        Object terpilih = spinnerKategori.getSelectedItem();
+        perbaruiKategori(editIndex >= 0 && terpilih != null ? terpilih.toString() : null);
+
+        if (editPIC.getText().toString().trim().isEmpty()) {
+            editPIC.setText(pengaturan.picDefault());
+        }
     }
 
     // =====================================================================
@@ -390,30 +533,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private List<String> daftarKategori(String jenis) {
-        List<String> kategori = new ArrayList<>();
-
-        switch (jenis) {
-            case "Material":
-                kategori.add("Utama");
-                kategori.add("Pendukung");
-                break;
-
-            case "Jasa":
-                kategori.add("Axius");
-                kategori.add("Subcon");
-                break;
-
-            default:
-                kategori.add("Transportasi");
-                kategori.add("Meal");
-                kategori.add("Akomodasi");
-                kategori.add("ATK");
-                kategori.add("Entertainment");
-                kategori.add("Toolkit");
-                break;
-        }
-
-        return kategori;
+        return pengaturan.kategori(jenis);
     }
 
     /**
@@ -587,6 +707,7 @@ public class MainActivity extends AppCompatActivity {
         if (gagal > 0) pesan += " " + gagal + " foto gagal dibaca.";
 
         txtStatus.setText(pesan);
+        Toast.makeText(this, pesan, Toast.LENGTH_SHORT).show();
     }
 
     private void perbaruiFotoForm() {
@@ -768,6 +889,8 @@ public class MainActivity extends AppCompatActivity {
         Transaksi t = transaksiList.get(index);
         editIndex = index;
 
+        pindahHalaman(R.id.nav_input);
+
         jenisTerpilih = t.jenis;
         perbaruiKategori(t.kategori);
         perbaruiTombolJenis();
@@ -887,6 +1010,7 @@ public class MainActivity extends AppCompatActivity {
                 : Color.parseColor("#6741A5"));
 
         perbaruiInfoJenis();
+        perbaruiBadgeRekap();
         tampilkanDaftarTransaksi();
     }
 
@@ -1212,22 +1336,27 @@ public class MainActivity extends AppCompatActivity {
         String pic = editPIC.getText().toString().trim();
         String tanggalReimburse = editReimburseDate.getText().toString().trim();
 
-        if (proyek.isEmpty()) {
-            editProject.setError("Nama proyek wajib diisi");
-            return;
-        }
+        if (proyek.isEmpty() || pic.isEmpty() || tanggalReimburse.isEmpty()) {
+            // Kolom ini ada di tab Input, jadi pindahkan dulu agar terlihat.
+            pindahHalaman(R.id.nav_input);
 
-        if (pic.isEmpty()) {
-            editPIC.setError("PIC wajib diisi");
-            return;
-        }
+            if (proyek.isEmpty()) {
+                editProject.setError("Nama proyek wajib diisi");
+                editProject.requestFocus();
+            } else if (pic.isEmpty()) {
+                editPIC.setError("PIC wajib diisi");
+                editPIC.requestFocus();
+            } else {
+                editReimburseDate.setError("Tanggal reimburse wajib diisi");
+            }
 
-        if (tanggalReimburse.isEmpty()) {
-            editReimburseDate.setError("Tanggal reimburse wajib diisi");
+            Toast.makeText(this, "Lengkapi data aktivitas terlebih dahulu",
+                    Toast.LENGTH_LONG).show();
             return;
         }
 
         if (editIndex >= 0) {
+            pindahHalaman(R.id.nav_input);
             Toast.makeText(this,
                     "Simpan atau batalkan edit transaksi terlebih dahulu",
                     Toast.LENGTH_LONG).show();
@@ -1265,6 +1394,7 @@ public class MainActivity extends AppCompatActivity {
         final List<Transaksi> transaksiFinal = new ArrayList<>();
         for (Transaksi t : transaksiList) transaksiFinal.add(t.salin());
         final List<String> fotoUmumFinal = new ArrayList<>(fotoUmum);
+        final String perusahaanFinal = pengaturan.namaPerusahaan();
 
         findViewById(R.id.btnEksporExcel).setEnabled(false);
         txtStatus.setText("Sedang membuat file Excel...");
@@ -1344,9 +1474,17 @@ public class MainActivity extends AppCompatActivity {
                 resume.put("G11", tanggalFinal);
                 resume.put("G12", picFinal);
                 resume.put("H20", kasFinal);
-                allData.put("Resume", resume);
 
-                allData.put("Rincian", buatDataRincian(transaksiFinal, keterangan));
+                Map<String, Object> rincian = buatDataRincian(transaksiFinal, keterangan);
+
+                // Judul dokumen mengikuti nama perusahaan di Pengaturan.
+                if (!perusahaanFinal.isEmpty()) {
+                    resume.put("E3", perusahaanFinal + "\nREIMBURSEMENT");
+                    rincian.put("A2", perusahaanFinal + "\nRINCIAN PENGELUARAN");
+                }
+
+                allData.put("Resume", resume);
+                allData.put("Rincian", rincian);
 
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
@@ -1651,8 +1789,9 @@ public class MainActivity extends AppCompatActivity {
         File file = new File(getFilesDir(), DRAFT_FILE);
 
         if (!file.exists()) {
-            // Pertama kali dipakai: isi kas dengan nilai bawaan.
-            editKas.setText(angkaUntukInput(KAS_DEFAULT));
+            // Pertama kali dipakai: isi dari pengaturan.
+            editKas.setText(angkaUntukInput(pengaturan.kasDefault()));
+            editPIC.setText(pengaturan.picDefault());
             return;
         }
 
@@ -1697,7 +1836,7 @@ public class MainActivity extends AppCompatActivity {
             migrasiFotoVersiLama(root);
         } catch (Exception e) {
             Log.w(TAG, "Draf rusak, mulai dari kosong", e);
-            editKas.setText(angkaUntukInput(KAS_DEFAULT));
+            editKas.setText(angkaUntukInput(pengaturan.kasDefault()));
         }
     }
 
@@ -1763,9 +1902,9 @@ public class MainActivity extends AppCompatActivity {
         kosongkanFormTransaksi();
 
         editProject.setText("");
-        editPIC.setText("");
+        editPIC.setText(pengaturan.picDefault());
         editReimburseDate.setText("");
-        editKas.setText(angkaUntukInput(KAS_DEFAULT));
+        editKas.setText(angkaUntukInput(pengaturan.kasDefault()));
 
         transaksiList.clear();
         fotoUmum.clear();
