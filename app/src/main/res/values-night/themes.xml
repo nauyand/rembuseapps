@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Rembuseapps" parent="Theme.MaterialComponents.NoActionBar">>
+    <style name="Theme.Rembuseapps" parent="Theme.MaterialComponents.NoActionBar">
 
         <!-- Warna utama -->
         <item name="colorPrimary">#6741A5</item>
